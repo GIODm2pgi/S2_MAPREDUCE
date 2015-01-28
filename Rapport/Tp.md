@@ -12,3 +12,10 @@
 
 **3)**
 *Reduce input groups=9* c'est le nombre de clef différentes.
+
+1.2 Premier contact avec HDFS
+-----------------------------
+
+```
+hdfs dfs -ls /user/odinpi/
+```
