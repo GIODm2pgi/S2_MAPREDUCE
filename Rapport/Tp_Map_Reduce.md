@@ -236,3 +236,19 @@ odinpi@NameNode:~$ wc -l wordcount/part-r-00000
 1.7 Compteur
 ------------
 
+```
+public static enum COUNTER_EMPTY_LINE { N; }
+
+// Dans le mapper		
+if (word.length() == 0)
+ context.getCounter(COUNTER_EMPTY_LINE.N).increment(1);
+
+// Dans le main		
+job.waitForCompletion(true);
+Counters counters = job.getCounters();
+Counter c1 = counters.findCounter(COUNTER_EMPTY_LINE.N);
+System.out.println(c1.getDisplayName()+":"+c1.getValue());
+```
+
+2.1 Map et Reduce
+-----------------
