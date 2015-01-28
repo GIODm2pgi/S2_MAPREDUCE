@@ -220,3 +220,19 @@ Pour information le terme le plus utilisé dans *Les Misérables* est **de** (**
 1.5 Nombre de reducers
 ----------------------
 
+Par défaut, un seul `reducer` est instancié, donc il génère un seul fichier de sortie `part-r-00000`. Quand on augmente le nombre de `reducer` à 3, il est normal que le système génère 3 fichiers de sortie, correspondant aux trois exécutions. On notera que la concaénation des 3 fichiers corresponds au fichier obtenue avec un seul `reducer` modulo l'ordre des lignes. 
+
+```
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00000
+17401 wordcountC3R/part-r-00000
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00001
+17491 wordcountC3R/part-r-00001
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00002
+17663 wordcountC3R/part-r-00002
+odinpi@NameNode:~$ wc -l wordcount/part-r-00000 
+52555 wordcount/part-r-00000
+```
+
+1.7 Compteur
+------------
+
