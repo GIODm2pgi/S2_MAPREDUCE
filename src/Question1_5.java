@@ -15,7 +15,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class WorldCount {
+public class Question1_5 {
+	
 	public static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -25,14 +26,15 @@ public class WorldCount {
 		}
 	}
 
-	public static class MyReducer extends Reducer<Text, IntWritable, Text, LongWritable> {
+	public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
 		@Override
 		protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-			long sum = 0 ;
+			int sum = 0 ;
 			for (IntWritable value : values) {
 				sum += value.get() ;
 			}
-			context.write(key, new LongWritable(sum));
+						
+			context.write(key, new IntWritable(sum));
 		}
 	}
 
@@ -42,8 +44,8 @@ public class WorldCount {
 		String input = otherArgs[0];
 		String output = otherArgs[1];
 		
-		Job job = Job.getInstance(conf, "WorldCount");
-		job.setJarByClass(WorldCount.class);
+		Job job = Job.getInstance(conf, "Question1_5");
+		job.setJarByClass(Question1_5.class);
 		
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
@@ -52,6 +54,11 @@ public class WorldCount {
 		job.setReducerClass(MyReducer.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
+		
+		/*** AJOUTS ***/
+		job.setCombinerClass(MyReducer.class);
+		job.setNumReduceTasks(3);
+		/******/
 		
 		FileInputFormat.addInputPath(job, new Path(input));
 		job.setInputFormatClass(TextInputFormat.class);
