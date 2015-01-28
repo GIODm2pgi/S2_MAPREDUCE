@@ -215,4 +215,8 @@ Compteur | Avec `combiner` | Sans `combiner`
 --- | --- | ---
 Reduce input records | 85301 | 421739
 
-Pour information le terme le plus utilisé dans *Les Misérables* est **X** (utilisé *0* fois).
+Pour information le terme le plus utilisé dans *Les Misérables* est **de** (**16757** fois).
+
+1.5 Nombre de reducers
+----------------------
+
