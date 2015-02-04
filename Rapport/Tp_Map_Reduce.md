@@ -260,3 +260,15 @@ Le type de données intermédiaires : le réduceur doit prend en entré un ```Te
 
 * ```Text/Text```  : Un pays / un tag
 * ```Text/StringAndInt``` : Un pays / (un tag, nombre d'occurences)
+
+Les tags les plus utilisés en France sont :
+```
+odinpi@NameNode:~$ cat flickr/part-r-00000  | grep FR
+FR	france 562
+FR	spain 112
+FR	europe 74
+FR	españa 69
+FR	bretagne 66
+```
+
+Dans le reducer, nous avons une structure en mémoire dont la taille dépend du nombre de tags distincts : on ne le connaît pas a priori, et il y en a potentiellement beaucoup, ceci n'est pas un problème, car plusieurs machines vont traiter notre problème, de plus en cas de baisse de performance, nous pouvons toujours ajouter à notre Hadoop.
