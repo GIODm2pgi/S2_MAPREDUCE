@@ -1,4 +1,6 @@
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
@@ -8,6 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
@@ -21,13 +24,13 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
-public class Question2_1 {
+public class Question2_2 {
 
 	public static enum CUSTOM_COUNTER {
 		COUNTRY_NOT_FOUND; 
 	}
 
-	public static class MyMapper extends Mapper<LongWritable, Text, Text, Text> {
+	public static class MyMapper extends Mapper<LongWritable, Text, Text, StringAndInt> {
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String[] data = value.toString().split("\t");
@@ -37,7 +40,7 @@ public class Question2_1 {
 				String tags = data[8]+","+data[9];
 
 				for (String t : tags.split(",")){
-					context.write(new Text(c.toString()), new Text(URLDecoder.decode(t,"UTF-8").toString()));
+					context.write(new Text(c.toString()), new StringAndInt(URLDecoder.decode(t,"UTF-8").toString(), 1));
 				}
 			}
 			else
@@ -45,13 +48,14 @@ public class Question2_1 {
 		}
 	}
 
-	public static class StringAndInt implements Comparable<StringAndInt> {
+	public static class StringAndInt implements Comparable<StringAndInt>, Writable {
 
 		public String tag;
 		public int occ;
 
+		public StringAndInt(){}
+		
 		public StringAndInt(String tag, int occ) {
-			super();
 			this.tag = tag;
 			this.occ = occ;
 		}
@@ -66,25 +70,56 @@ public class Question2_1 {
 				return 0;
 		}
 
-	}
-
-	public static class MyReducer extends Reducer<Text, Text, Text, Text> {
 		@Override
-		protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+		public void readFields(DataInput arg0) throws IOException {
+			tag=arg0.readUTF();
+			occ=arg0.readInt();			
+		}
+
+		@Override
+		public void write(DataOutput arg0) throws IOException {
+			arg0.writeUTF(tag);
+			arg0.writeInt(occ);
+		}
+
+	}
+	
+	public static class MyCombiner extends Reducer<Text, StringAndInt, Text, StringAndInt> {
+		@Override
+		protected void reduce(Text key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
 			Map<String, Integer> map = new HashMap<String, Integer>();
-			for (Text value : values) {
-				if (map.containsKey(value.toString()))
-					map.put(value.toString(), map.get(value.toString())+1);
+			for (StringAndInt value : values) {
+				if (map.containsKey(value.tag))
+					map.put(value.tag, map.get(value.tag) + value.occ);
 				else
-					map.put(value.toString(), 0);
+					map.put(value.tag, value.occ);
 			}
 
+			for (String k : map.keySet()){
+				context.write(key, new StringAndInt(k, map.get(k)));
+			}
+		}
+	}
+
+	public static class MyReducer extends Reducer<Text, StringAndInt, Text, Text> {
+		@Override
+		protected void reduce(Text key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
 			MinMaxPriorityQueue<StringAndInt> list = MinMaxPriorityQueue.create();
-			for (String k : map.keySet())
-				list.add(new StringAndInt(k, map.get(k)));
+			
+			Map<String, Integer> map = new HashMap<String, Integer>();
+			for (StringAndInt value : values) {
+				if (map.containsKey(value.tag))
+					map.put(value.tag, map.get(value.tag) + value.occ);
+				else
+					map.put(value.tag, value.occ);
+			}
+
+			for (String k : map.keySet()){
+				list.add(new StringAndInt(k,map.get(k)));
+			}
 
 			for (int i=0; i < context.getConfiguration().getInt("K", 1); i++){
-				StringAndInt toAdd = list.pollLast();
+				StringAndInt toAdd = list.pollLast();				
 				context.write(key, new Text(toAdd.tag+" "+toAdd.occ));
 			}
 		}
@@ -97,16 +132,20 @@ public class Question2_1 {
 		String output = otherArgs[1];
 		conf.setInt("K", Integer.parseInt(otherArgs[2]));
 
-		Job job = Job.getInstance(conf, "Question2_1");
-		job.setJarByClass(Question2_1.class);
+		Job job = Job.getInstance(conf, "Question2_2");
+		job.setJarByClass(Question2_2.class);
 
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Text.class);
+		job.setMapOutputValueClass(StringAndInt.class);
 
 		job.setReducerClass(MyReducer.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
+		
+		/*** AJOUTS ***/
+		job.setCombinerClass(MyCombiner.class);
+		/******/
 
 		FileInputFormat.addInputPath(job, new Path(input));
 		job.setInputFormatClass(TextInputFormat.class);
