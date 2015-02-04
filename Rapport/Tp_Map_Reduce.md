@@ -252,3 +252,11 @@ System.out.println(c1.getDisplayName()+":"+c1.getValue());
 
 2.1 Map et Reduce
 -----------------
+
+2.2 Combiner
+------------
+
+Le type de données intermédiaires : le réduceur doit prend en entré un ```Text/StringAndInt``` (doit implémenter ```Writable``` ) et le combineur doit prendre en entrée ```Text/Text``` provenant du mappeur et doit fournir un ```Text/StringAndInt``` au réduceur.
+
+* ```Text/Text```  : Un pays / un tag
+* ```Text/StringAndInt``` : Un pays / (un tag, nombre d'occurences)
