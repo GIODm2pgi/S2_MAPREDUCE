@@ -70,19 +70,20 @@ public class Question3_1 {
 		}
 
 		@Override
-		public int compareTo(StringAndInt arg0) {
-			if (country.equals(arg0.country)){			
-				if (occ < arg0.occ)
-					return -1;
-				else if (occ > arg0.occ)
-					return 1;
-				else
-					return 0;
-			}
-			else
-				return country.compareTo(arg0.country);
+		public boolean equals(Object obj) {
+			return ((StringAndInt) obj).country.equals(this.country);
 		}
-		
+
+		@Override
+		public int hashCode() {
+			return this.country.hashCode();
+		}
+
+		@Override
+		public int compareTo(StringAndInt arg0) {
+			return this.country.compareTo(arg0.country);
+		}
+
 		@Override
 		public void readFields(DataInput arg0) throws IOException {
 			country=arg0.readUTF();
@@ -95,6 +96,11 @@ public class Question3_1 {
 			arg0.writeUTF(country);
 			arg0.writeUTF(tag);
 			arg0.writeInt(occ);
+		}
+
+		@Override
+		public String toString() {
+			return (country+"-"+tag+"-"+occ);
 		}
 
 	}
@@ -110,18 +116,18 @@ public class Question3_1 {
 		public int compare(WritableComparable a, WritableComparable b) {
 			StringAndInt k1 = (StringAndInt) a;
 			StringAndInt k2 = (StringAndInt) b;
-			
-			if (k1.country.equals(k2.country)){			
+
+			int comp = k1.compareTo(k2);
+			if (comp == 0){
 				if (k1.occ < k2.occ)
-					return -1;
-				else if (k1.occ > k2.occ)
 					return 1;
+				else if (k1.occ > k2.occ)
+					return -1;
 				else
-					return 0;
+					return k1.tag.compareTo(k2.tag);
 			}
-			else
-				return k1.country.compareTo(k2.country);
-			
+			else 
+				return comp;
 		}
 
 	}
@@ -131,13 +137,13 @@ public class Question3_1 {
 		protected MyGrouparator (){
 			super(StringAndInt.class, true);
 		}
-		
+
 		@SuppressWarnings("rawtypes")
 		@Override
 		public int compare(WritableComparable a, WritableComparable b) {
 			StringAndInt k1 = (StringAndInt) a;
 			StringAndInt k2 = (StringAndInt) b;
-			return k1.country.compareTo(k2.country);			
+			return k1.compareTo(k2);	
 		}
 
 	}
@@ -162,23 +168,13 @@ public class Question3_1 {
 	public static class MyReducer2 extends Reducer<StringAndInt, StringAndInt, Text, Text> {
 		@Override
 		protected void reduce(StringAndInt key, Iterable<StringAndInt> values, Context context) throws IOException, InterruptedException {
-			Map<String, Integer> map = new HashMap<String, Integer>();
+			int i=0,K=context.getConfiguration().getInt("K", 1);
 			for (StringAndInt value : values) {
-				if (map.containsKey(value.tag))
-					map.put(value.tag, map.get(value.tag) + value.occ);
-				else
-					map.put(value.tag, value.occ);
-			}
-
-			//int i=0;
-			for (String k : map.keySet()){
-				context.write(new Text(key.country), new Text(k + "\t" + map.get(k)));
-				/*if ((i + 1) == 2)
+				context.write(new Text(key.country), new Text(value.tag + "\t" + value.occ));
+				i++;
+				if (i == K)
 					break;
-				else
-					i++;*/
 			}
-			context.write(new Text("------------------------"), new Text("------------------------"));
 		}
 	}
 
@@ -220,8 +216,8 @@ public class Question3_1 {
 		job2.setOutputKeyClass(Text.class);
 		job2.setOutputValueClass(Text.class);
 
-		job2.setGroupingComparatorClass(MyGrouparator.class);
 		job2.setSortComparatorClass(MyComparator.class);
+		job2.setGroupingComparatorClass(MyGrouparator.class);
 
 		FileInputFormat.addInputPath(job2, new Path(output));
 		job2.setInputFormatClass(SequenceFileInputFormat.class);
