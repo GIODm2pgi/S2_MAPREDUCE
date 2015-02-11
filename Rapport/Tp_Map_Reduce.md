@@ -282,7 +282,7 @@ Pour résoudre notre problème, nous allons utiliser 2 jobs (donc 2 couples ```M
 * Job2 -> Map : Renvoie les données.
 * Job2 -> secondarySort : trie par nombre d'occurence.
 * Job2 -> grouping : groupe les données par country.
-* Job3 -> Reducer : traite le nombre de données souhaité.
+* Job2 -> Reducer : traite le nombre de données souhaité.
 
 L'avantage ici, c'est que le réduceur n'a pas besoin de gérer une autre structure (de map) comme pour les questions précédente. Il a juste besoin de retourner les K premiers éléments des groupes qu'ils recoient.
 
