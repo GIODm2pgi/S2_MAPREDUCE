@@ -286,4 +286,6 @@ Pour résoudre notre problème, nous allons utiliser 2 jobs (donc 2 couples ```M
 
 L'avantage ici, c'est que le réduceur n'a pas besoin de gérer une autre structure (de map) comme pour les questions précédente. Il a juste besoin de retourner les K premiers éléments des groupes qu'ils recoient.
 
-S’il existe des tags classés ex aequo dans le top-K d’un pays, alors rien ne garatie que le résultat soit identique. En effet, le problème vient de l'ordre d'arrivé des tags ex aequo, il s'agit d'un probème classique dans les système de trie en concurence.
+S’il existe des tags classés ex aequo dans le top-K d’un pays, alors rien ne garatie que le résultat soit identique. En effet, le problème vient de l'ordre d'arrivé des tags ex aequo, il s'agit d'un probème classique dans les système de trie en concurence, néamoins, c'est Hadoop qui gère cette partie donc nous n'avons aucune idée du résultat.
+En réalité sur une expérimentation (5 éxecutions) le résultat est identique, donc potentiellement, dans notre cas d'execution, hadoop le résultat semble déterministe. On pourrai vérifier cette hypothèse en modifiant l'ordre du fichier d'entrée est vérifier que les résultats soient différents. 
+Il est cependant possible de forcer (l'execution déterministe) en rajoutant le trie par tag quand les tag sont ex eaquo en terme de fréquence.
