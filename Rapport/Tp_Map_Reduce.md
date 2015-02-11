@@ -277,7 +277,13 @@ Dans le reducer, nous avons une structure en mémoire dont la taille dépend du 
 -----------------------------------------------
 
 Pour résoudre notre problème, nous allons utiliser 2 jobs (donc 2 couples ```Map/Reducer```). La sortie du premier job sera l'entré du deuxième job. En outre, la spécification des jobs est la suivante :
-* Job1 -> Map :
-* Job1 -> Reducer :
-* Job2 -> Map :
-* Job3 -> Reducer :
+* Job1 -> Map : Cherche les tag est créer la stucture StringAndInt (idem question précédente).
+* Job1 -> Reducer : Regroupe les StringAndInt de même tag (clef) en un (idem question preécédente). 
+* Job2 -> Map : Renvoie les données.
+* Job2 -> secondarySort : trie par nombre d'occurence.
+* Job2 -> grouping : groupe les données par country.
+* Job3 -> Reducer : traite le nombre de données souhaité.
+
+L'avantage ici, c'est que le réduceur n'a pas besoin de gérer une autre structure (de map) comme pour les questions précédente. Il a juste besoin de retourner les K premiers éléments des groupes qu'ils recoient.
+
+S’il existe des tags classés ex aequo dans le top-K d’un pays, alors rien ne garatie que le résultat soit identique. En effet, le problème vient de l'ordre d'arrivé des tags ex aequo, il s'agit d'un probème classique dans les système de trie en concurence.
