@@ -1,0 +1,198 @@
+
+# Introduction à Map-Reduce - TP
+
+Ce document répond aux questions du TP Map Reduce.
+Les sources des différentes questions sont présentes dans le dossier `src/`.
+
+Les auteurs sont :
+
+- Johan Girard
+- Pierre Odin
+
+
+## 1) Prise en main
+
+
+### 1.1) Exécution locale
+
+1. Dans notre cas `Map input records` est égale à 2, cette valeur
+   représente donc, le nombre d'entrée (dans la map) en input.
+   Dans notre cas `Map output records` est égale à 11, cette valeur
+   représente donc, le nombre d'entrée (dans la map) en output (résultat).
+
+2. `Map output records=11` est égale à `Reduce input records=11`,
+   car l'input du reduce correspond à l'output du map (et qu'il n'y a pas
+   de combiner).
+
+3. Dans notre cas `Reduce input groups` est égale à 9, cette valeur
+   représente donc, le nombre de clef différentes en input.
+
+
+### 1.2) Premier contact avec HDFS
+
+Le chemin de notre répertoire personnel dans HDFS est le suivant :
+```
+/user/odinpi/
+```
+
+
+### 1.3) Exécution sur le cluster
+
+On peut voir la ligne suivante, au début de notre trace la ligne suivante :
+```
+15/01/28 10:51:18 INFO mapreduce.JobSubmitter: number of splits:5
+```
+Elle indique que le nombre de splits est de 5, ceci signifiant que HDFS a 
+lus 5 fichiers en input (les 5 tomes des *Misérables*).
+
+
+### 1.4) Combiner
+
+Pour résoudre notre problème, on rajoute la classe du reducer dans 
+`setCombinerClass`.
+
+ 1. Les compteurs qui permettent de savoir que le `combiner` a fonctionné 
+    sont les suivants : 
+    
+    - `Reduce input record`
+    
+ 2. Les compteurs qui permettent d’estimer le gain effectivement apporté
+    par le `combiner` sont les suivants : 
+    
+    - `Combine input records=421739`
+    - `Combine output records=85301`
+
+En comparaison, avec la question précédente :
+
+| Compteur             | Avec `combiner` | Sans `combiner` |
+|----------------------|---------------- |-----------------|
+| Reduce input records | 85301           | 421739          |
+
+Pour information le terme le plus utilisé dans *Les Misérables* 
+est le terme **de** (**16757** fois).
+
+
+### 1.5) Nombre de reducers
+
+
+Par défaut, un seul `reducer` est instancié, donc il génère un seul 
+fichier de sortie (nommé `part-r-00000`).
+Quand on augmente le nombre de `reducer` à 3, il est normal que le système 
+génère 3 fichiers de sortie, correspondant aux trois exécutions.
+On notera que la concaténation de ces 3 fichiers corresponds au fichier 
+obtenue avec un seul `reducer` modulo l'ordre des lignes. 
+
+```
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00000
+17401 wordcountC3R/part-r-00000
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00001
+17491 wordcountC3R/part-r-00001
+odinpi@NameNode:~$ wc -l wordcountC3R/part-r-00002
+17663 wordcountC3R/part-r-00002
+odinpi@NameNode:~$ wc -l wordcount/part-r-00000 
+52555 wordcount/part-r-00000
+```
+
+### 1.6) In-Mapper Combiner
+
+Le code `src/Question1_6.java` répond à toutes questions.
+
+
+### 1.7) Compteur
+
+Pour résoudre ce problème, nous avons rajouté les instructions suivantes :
+```
+public static enum COUNTER_EMPTY_LINE { N; }
+
+// Dans le mapper		
+if (word.length() == 0)
+ context.getCounter(COUNTER_EMPTY_LINE.N).increment(1);
+
+// Dans le main		
+job.waitForCompletion(true);
+Counters counters = job.getCounters();
+Counter c1 = counters.findCounter(COUNTER_EMPTY_LINE.N);
+System.out.println(c1.getDisplayName()+":"+c1.getValue());
+```
+
+
+## 2) Top-tags Flickr par pays, avec tri en mémoire
+
+
+### 2.1) Map et Reduce
+
+Le code `src/Question2_1.java` répond à toutes questions.
+
+
+### 2.2) Combiner
+
+Le type de données intermédiaires : 
+
+1. Le `reducer` doit prend en entrée un `Text/StringAndInt` (qui doit 
+   implémenter `Writable`). 
+
+2. Le `combiner` doit prendre en entrée un `Text/Text` provenant du `mapper`
+   et doit fournir un `Text/StringAndInt` au `reducer`.
+
+Avec la sémantique suivante :
+
+- `Text/Text` représente un couple, un pays / un tag.
+- `Text/StringAndInt` représente un couple, un pays / (un tag, nombre d'occurences).
+
+Pour information, les tags les plus utilisés en France sont :
+```
+odinpi@NameNode:~$ cat flickr/part-r-00000  | grep FR
+FR	france 563
+FR	spain 113
+FR	europe 75
+FR	españa 70
+FR	bretagne 67
+```
+
+Enfin, dans le `reducer`, nous avons une structure en mémoire dont la taille 
+dépend du nombre de tags distincts : on ne le connaît pas a priori, et il y 
+en a potentiellement beaucoup, ceci n'est pas un problème, car plusieurs 
+machines vont traiter notre problème. De plus en cas de baisse de performance,
+nous pouvons toujours en ajouter à notre Hadoop.
+
+
+## 3) Top-tags Flickr par pays, avec tri par Hadoop
+
+Pour résoudre notre problème, nous allons utiliser 2 jobs (donc 2 couples 
+`Map/Reducer`). La sortie du premier job sera l'entré du deuxième job. 
+En outre, la spécification des jobs est la suivante :
+
+1. Job1 :
+
+  - `Map` : Cherche les tags et créé la stucture `StringAndInt`, 
+  	comme pour la question précédente.
+  - `Reducer` : Regroupe les `StringAndInt` de même tag (clef) en un,
+  	 comme pour la question précédente.
+
+2. Job2 :
+
+  - `Map` : Permet de renvoyer les données (ne réalise pas de traitement).
+  - `secondarySort` : Permet de trier par nombre d'occurences.
+  - `grouping` : Permet de grouper les données par country.
+  - `Reducer` : Permet de traiter le nombre de données souhaitées.
+
+
+### 3.1) Passes MapReduce en chaîne
+
+L'avantage ici, est que le `reducer` n'a pas besoin de gérer d'autres structures
+(de map) comme pour les questions précédentes. Il a juste besoin de retourner 
+les K premiers éléments des groupes qu'il reçoit.
+
+S’il existe des tags classés ex-aequo dans le top-K d’un pays, alors rien ne
+garantie que le résultat soit identique. En effet, le problème vient de l'ordre
+d'arrivé des tags ex-aequo, il s'agit d'un probème classique dans les système de
+trie en concurence.
+Néamoins, c'est Hadoop qui gère cette partie donc nous n'avons aucune idée du
+résultat.
+En réalité sur une expérimentation (5 exécutions) le résultat est identique,
+donc potentiellement, dans notre cas d'execution, le résultat semble déterministe.
+On pourrai vérifier cette hypothèse en modifiant l'ordre du fichier d'entrée, 
+et vérifier que les résultats sont différents. 
+Il est cependant possible de forcer (l'execution déterministe) en rajoutant le
+trie par tag quand les tag sont ex-eaquo en terme de fréquence.
+
